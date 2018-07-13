@@ -94,17 +94,21 @@ def delete_data():
         if conn is not None:
             conn.close()
 
-def shouldSaveData(_pincode, _lat, _long):
-    sql = """SELECT * FROM area_codes WHERE pincode = {} OR g_point <@> cube({},{}) > 0""".format(_pincode, _lat, _long)
+def should_save_data(_pincode, _lat, _long):
+    # sql = """SELECT pincode FROM area_codes WHERE pincode = 'IN/{}' OR cube_distance( g_point,cube({},{}) ) < 1""".format(_pincode, _lat, _long)
+    sql = """SELECT pincode, place_name FROM area_codes WHERE pincode = 'IN/{}' OR earth_distance( ll_to_earth(lat, long), ll_to_earth({},{}) ) < 4000""".format(_pincode, _lat, _long)
     shouldSave = False
+    data = None
 
     try:
         cur, conn = getConnection()
         print(sql)
         cur.execute( sql )
-        print(cur.fetchall())
-        if len(cur.fetchall()) == 0:
-            shouldSaveData = True
+        data = cur.fetchall()
+
+        if not data:
+            shouldSave = True
+
         cur.close()
     except Exception as e:
         print(e)
@@ -112,10 +116,10 @@ def shouldSaveData(_pincode, _lat, _long):
         if conn is not None:
             conn.close()
 
-    return shouldSave
+    return shouldSave, data
 
-def saveData():
-
+def save_data():
+    return False
 
 def main(*kargs):
     program_name = sys.argv[1]
