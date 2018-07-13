@@ -118,8 +118,22 @@ def should_save_data(_pincode, _lat, _long):
 
     return shouldSave, data
 
-def save_data():
-    return False
+def save_data(_pincode, _place, _state, _lat, _long):
+    sql = """INSERT INTO area_codes(pincode, place_name, state_name, lat, long, g_point) VALUES ('IN/{}', '{}', '{}', {}, {}, cube({}, {})) """.format(_pincode, _place, _state, _lat, _long, _lat, _long)
+    
+    try:
+        cur, conn = getConnection()
+        print(sql)
+        cur.execute( sql )
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(e)
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return {}
 
 def main(*kargs):
     program_name = sys.argv[1]
