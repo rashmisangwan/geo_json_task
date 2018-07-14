@@ -94,20 +94,28 @@ def delete_data():
         if conn is not None:
             conn.close()
 
-def should_save_data(_pincode, _lat, _long):
-    # sql = """SELECT pincode FROM area_codes WHERE pincode = 'IN/{}' OR cube_distance( g_point,cube({},{}) ) < 1""".format(_pincode, _lat, _long)
-    sql = """SELECT pincode, place_name FROM area_codes WHERE pincode = 'IN/{}' OR earth_distance( ll_to_earth(lat, long), ll_to_earth({},{}) ) < 4000""".format(_pincode, _lat, _long)
+def should_save_data(_pincode, _lat, _long, _offset_distance):
+    sql = """SELECT * FROM area_codes WHERE pincode = 'IN/{0}' OR earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({1},{2}) ) <= {3}""".format(_pincode, _lat, _long, _offset_distance)
     shouldSave = False
-    data = None
+    response = None
 
     try:
         cur, conn = getConnection()
         print(sql)
         cur.execute( sql )
         data = cur.fetchall()
-
         if not data:
             shouldSave = True
+        else:
+            response = []
+            for row in data:
+                response.append({
+                    "pincode": row[0],
+                    "place_name": row[1],
+                    "state_name": row[2],
+                    "lat": row[3],
+                    "long": row[4],
+                })
 
         cur.close()
     except Exception as e:
@@ -116,24 +124,60 @@ def should_save_data(_pincode, _lat, _long):
         if conn is not None:
             conn.close()
 
-    return shouldSave, data
+    return shouldSave, response
 
 def save_data(_pincode, _place, _state, _lat, _long):
     sql = """INSERT INTO area_codes(pincode, place_name, state_name, lat, long, g_point) VALUES ('IN/{}', '{}', '{}', {}, {}, cube({}, {})) """.format(_pincode, _place, _state, _lat, _long, _lat, _long)
-    
+    status = ''
     try:
         cur, conn = getConnection()
         print(sql)
         cur.execute( sql )
         conn.commit()
         cur.close()
+        status = 'SUCCESS'
     except Exception as e:
+        status = 'ERROR'
         print(e)
     finally:
         if conn is not None:
             conn.close()
 
-    return {}
+    return status
+
+def get_nearby_data_default(_lat, _long, _distance):
+    sql = """SELECT *, earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) as distance 
+            FROM area_codes 
+            WHERE (lat::numeric <> {0} and long::numeric <> {1} ) and earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) <= {2}""".format(_lat, _long, _distance)
+    status = ''
+    response = []
+
+    try:
+        cur, conn = getConnection()
+        print(sql)
+        cur.execute( sql )
+        data = cur.fetchall()
+        print(data)
+        for row in data:
+            response.append({
+                "pincode": row[0],
+                "place_name": row[1],
+                "state_name": row[2],
+                "lat": row[3],
+                "long": row[4],
+                "distance": row[7]
+            })
+
+        cur.close()
+        status = 'SUCCESS'
+    except Exception as e:
+        status = 'ERROR'
+        print(e)
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return status, response
 
 def main(*kargs):
     program_name = sys.argv[1]
