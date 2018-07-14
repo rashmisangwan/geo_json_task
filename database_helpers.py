@@ -95,7 +95,7 @@ def delete_data():
             conn.close()
 
 def should_save_data(_pincode, _lat, _long, _offset_distance):
-    sql = """SELECT * FROM area_codes WHERE pincode = 'IN/{0}' OR earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({1},{2}) ) <= {3}""".format(_pincode, _lat, _long, _offset_distance)
+    sql = """SELECT * FROM area_codes WHERE pincode = 'IN/{0}' OR earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({1},{2}) ) / 1000 <= {3}""".format(_pincode, _lat, _long, _offset_distance)
     shouldSave = False
     response = None
 
@@ -146,9 +146,46 @@ def save_data(_pincode, _place, _state, _lat, _long):
     return status
 
 def get_nearby_data_default(_lat, _long, _distance):
-    sql = """SELECT *, earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) as distance 
+    sql = """SELECT *, earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) / 1000 as distance 
             FROM area_codes 
-            WHERE (lat::numeric <> {0} and long::numeric <> {1} ) and earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) <= {2}""".format(_lat, _long, _distance)
+            WHERE (lat::numeric <> {0} and long::numeric <> {1} ) and earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) / 1000 <= {2}
+            ORDER BY distance ASC
+            """.format(_lat, _long, _distance)
+    status = ''
+    response = []
+
+    try:
+        cur, conn = getConnection()
+        print(sql)
+        cur.execute( sql )
+        data = cur.fetchall()
+        for row in data:
+            response.append({
+                "pincode": row[0],
+                "place_name": row[1],
+                "state_name": row[2],
+                "lat": row[3],
+                "long": row[4],
+                "distance": row[7]
+            })
+
+        cur.close()
+        status = 'SUCCESS'
+    except Exception as e:
+        status = 'ERROR'
+        print(e)
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return status, response
+
+def get_nearby_data_self(_lat, _long, _distance):
+    sql = """SELECT *, ( 6371 * acos( cos( radians({0}) ) * cos( radians(lat::numeric) ) * cos( radians(long::numeric) - radians({1}) ) + sin( radians({0}) ) * sin( radians(lat::numeric) ) ) ) AS distance
+            FROM area_codes 
+            WHERE (lat::numeric <> {0} and long::numeric <> {1} ) and  ( 6371 * acos( cos( radians({0}) ) * cos( radians(lat::numeric) ) * cos( radians(long::numeric) - radians({1}) ) + sin( radians({0}) ) * sin( radians(lat::numeric) ) ) ) < {2} 
+            ORDER BY distance ASC
+            """.format(_lat, _long, _distance)
     status = ''
     response = []
 
