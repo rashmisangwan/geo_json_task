@@ -1,4 +1,5 @@
 import csv
+import json
 import psycopg2
 import sys
 
@@ -50,6 +51,41 @@ def import_data():
             values.append(query)
 
         sql += ",\n\t ".join(str(x) for x in values)
+
+    try:
+        cur, conn = getConnection()
+        print(sql)
+        cur.execute( sql )
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(e)
+    finally:
+        if conn is not None:
+            conn.close()
+
+def import_geojson_data():
+    values = []
+    sql = """INSERT INTO area_geojson(place_name, parent_name, type, boundary_points) Values \n\t"""
+    area_file = 'area_data.json'
+
+    with open(area_file) as f:
+        data = json.load(f)
+
+    for feature in data['features']:
+        polygon_geom = ','.join(list(map(lambda x: str(tuple(x)), feature['geometry']['coordinates'][0])))
+
+        query = "("
+        query += "'" + feature['properties']['name'] + "',"
+        query += "'" + feature['properties']['parent'] + "',"
+        query += "'" + feature['properties']['type'] + "',"
+        query += "'" + polygon_geom + "'"
+        query += ")"
+
+        values.append(query)
+
+    print(values[0])
+    sql += ",\n\t ".join(str(x) for x in values)
 
     try:
         cur, conn = getConnection()
@@ -216,6 +252,35 @@ def get_nearby_data_self(_lat, _long, _distance):
 
     return status, response
 
+def get_containing_area(_lat, _long):
+    sql = """select * from area_geojson where boundary_points  @> '({}, {})';""".format(_lat, _long)
+    status = ''
+    response = []
+
+    try:
+        cur, conn = getConnection()
+        print(sql)
+        cur.execute( sql )
+        data = cur.fetchall()
+        print(data)
+        for row in data:
+            response.append({
+                "id": row[0],
+                "place_name": row[1],
+                "state_name": row[2]
+            })
+
+        cur.close()
+        status = 'SUCCESS'
+    except Exception as e:
+        status = 'ERROR'
+        print(e)
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return status, response
+
 def main(*kargs):
     program_name = sys.argv[1]
 
@@ -225,6 +290,8 @@ def main(*kargs):
         delete_data()
     elif program_name == 'show_data':
         show_data()
+    elif program_name == 'import_geojson_data':
+        import_geojson_data()
 
 
 if __name__ == '__main__':

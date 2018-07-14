@@ -1,5 +1,5 @@
 from flask import Flask, request
-from database_helpers import should_save_data, save_data, get_nearby_data_default, get_nearby_data_self
+from database_helpers import should_save_data, save_data, get_nearby_data_default, get_nearby_data_self, get_containing_area
 import json
 
 app = Flask(__name__)
@@ -53,11 +53,12 @@ def getUsingPostgresHandler():
 			_lat = float(request.args.get('lat'))
 			_long = float(request.args.get('long'))
 			_distance = float(request.args.get('distance'))
+			_distance_meters = _distance *  1000
 
 			if not _lat or not _long or not _distance:
 				response['status']['code'] = 'VALIDATION_ERROR :: latitude, longitude and Distance are compulsary'
 			else:
-				response['status']['code'], response["payload"] = get_nearby_data_default(_lat, _long, _distance)
+				response['status']['code'], response["payload"] = get_nearby_data_default(_lat, _long, _distance_meters)
 
 		except:
 			response['status']['code'] = 'INCORRECT_DATA'
@@ -87,6 +88,27 @@ def getUsingSelfHandler():
 	# 	response['status']['code'] = 'WRONG_API_METHOD'
 
 	return json.dumps(response)
+
+@app.route('/get_containing_area', methods=['GET'])
+def getContainingAreaHandler():
+	response = {
+		"payload": {},
+		"status": {
+			"code": ''
+		}
+	}
+	if request.method == 'GET':
+		_lat = request.args.get('lat')
+		_long = request.args.get('long')
+
+		if not _lat or not _long:
+			response['status']['code'] = 'VALIDATION_ERROR :: latitude and longitude are compulsary'
+		else:
+			response['status']['code'], response["payload"] = get_containing_area(_lat, _long)
+
+	return json.dumps(response)
+
+
 
 
 if __name__ == "__main__":
