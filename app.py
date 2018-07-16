@@ -56,7 +56,7 @@ def index():
 
 @app.route('/post_location', methods=['POST'])
 def postLocationHandler():
-	nearby_offset_distance = 5000 # in meters
+	nearby_offset_distance = 5 # in km
 	response = {
 		"payload": {},
 		"status": {
