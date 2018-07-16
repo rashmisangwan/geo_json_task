@@ -54,7 +54,6 @@ def import_data():
 
     try:
         cur, conn = getConnection()
-        print(sql)
         cur.execute( sql )
         conn.commit()
         cur.close()
@@ -89,7 +88,6 @@ def import_geojson_data():
 
     try:
         cur, conn = getConnection()
-        print(sql)
         cur.execute( sql )
         conn.commit()
         cur.close()
@@ -137,7 +135,6 @@ def should_save_data(_pincode, _lat, _long, _offset_distance):
 
     try:
         cur, conn = getConnection()
-        print(sql)
         cur.execute( sql )
         data = cur.fetchall()
         if not data:
@@ -167,7 +164,6 @@ def save_data(_pincode, _place, _state, _lat, _long):
     status = ''
     try:
         cur, conn = getConnection()
-        print(sql)
         cur.execute( sql )
         conn.commit()
         cur.close()
@@ -181,10 +177,29 @@ def save_data(_pincode, _place, _state, _lat, _long):
 
     return status
 
+def delete_record(_pincode):
+    sql = """DELETE FROM area_codes WHERE pincode = 'IN/{}'""".format(_pincode)
+    status = ''
+    try:
+        cur, conn = getConnection()
+        cur.execute( sql )
+        conn.commit()
+        cur.close()
+        status = 'SUCCESS'
+        print(sql)
+    except Exception as e:
+        status = 'ERROR'
+        print(e)
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return status
+
 def get_nearby_data_default(_lat, _long, _distance):
-    sql = """SELECT *, earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) / 1000 as distance 
+    sql = """SELECT *, earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) as distance 
             FROM area_codes 
-            WHERE (lat::numeric <> {0} and long::numeric <> {1} ) and earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) / 1000 <= {2}
+            WHERE (lat::numeric <> {0} and long::numeric <> {1} ) and earth_distance( ll_to_earth(lat::numeric, long::numeric), ll_to_earth({0},{1}) ) <= {2}
             ORDER BY distance ASC
             """.format(_lat, _long, _distance)
     status = ''
@@ -192,9 +207,9 @@ def get_nearby_data_default(_lat, _long, _distance):
 
     try:
         cur, conn = getConnection()
-        print(sql)
         cur.execute( sql )
         data = cur.fetchall()
+        # print(sql)
         for row in data:
             response.append({
                 "pincode": row[0],
@@ -227,10 +242,8 @@ def get_nearby_data_self(_lat, _long, _distance):
 
     try:
         cur, conn = getConnection()
-        print(sql)
         cur.execute( sql )
         data = cur.fetchall()
-        print(data)
         for row in data:
             response.append({
                 "pincode": row[0],
@@ -259,10 +272,8 @@ def get_containing_area(_lat, _long):
 
     try:
         cur, conn = getConnection()
-        print(sql)
         cur.execute( sql )
         data = cur.fetchall()
-        print(data)
         for row in data:
             response.append({
                 "id": row[0],
@@ -286,12 +297,11 @@ def main(*kargs):
 
     if program_name == 'import_data':
         import_data()
+        import_geojson_data()
     elif program_name == 'delete_data':
         delete_data()
     elif program_name == 'show_data':
         show_data()
-    elif program_name == 'import_geojson_data':
-        import_geojson_data()
 
 
 if __name__ == '__main__':

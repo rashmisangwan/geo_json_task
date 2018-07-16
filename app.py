@@ -1,12 +1,58 @@
 from flask import Flask, request
 from database_helpers import should_save_data, save_data, get_nearby_data_default, get_nearby_data_self, get_containing_area
-import json
+from flask import jsonify
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-  return 'Hello World!!'
+	response = {
+		"API_INFORMATION": {
+			"post_location": {
+				"method": "POST",
+				"data": [
+					{
+						"lat": "float",
+						"long": "float",
+						"pincode": "string",
+						"city": "string",
+						"state": "string",
+					}
+				]
+			},
+			"get_using_postgres": {
+				"method": "GET",
+				"data": [
+					{
+						"lat": "float",
+						"long": "float",
+						"distance": "float",
+					}
+				]
+			},
+			"get_using_self": {
+				"method": "GET",
+				"data": [
+					{
+						"lat": "float",
+						"long": "float",
+						"distance": "float",
+					}
+				]
+			},
+			"get_containing_area": {
+				"method": "POST",
+				"data": [
+					{
+						"lat": "float",
+						"long": "float"
+					}
+				]
+			}
+		}
+	}
+
+	return jsonify(response)
 
 @app.route('/post_location', methods=['POST'])
 def postLocationHandler():
@@ -18,27 +64,27 @@ def postLocationHandler():
 		}
 	}
 	if request.method == 'POST':
-		_lat = request.form.get('lat')
-		_long = request.form.get('long')
-		_pincode = request.form.get('pincode')
-		_city = request.form.get('city')
-		_state = request.form.get('state')
+		try:
+			_lat = float(request.form.get('lat'))
+			_long = float(request.form.get('long'))
+			_pincode = request.form.get('pincode')
+			_city = request.form.get('city')
+			_state = request.form.get('state')
 
-		if not _lat or not _long or not _pincode:
-			response['status']['code'] = 'VALIDATION_ERROR :: pincode, latitude and longitude are compulsary'
-		else:
-			shouldSave = False
-			shouldSave, response['payload'] = should_save_data(_pincode, _lat, _long, nearby_offset_distance)
-
-			if shouldSave:
-				response['status']['code'] = save_data(_pincode, _city, _state, _lat, _long)
+			if not _lat or not _long or not _pincode:
+				response['status']['code'] = 'VALIDATION_ERROR :: pincode, latitude and longitude are compulsary'
 			else:
-				response['status']['code'] = 'ALREADY_EXISTS'
-	# else:
-	# 	response['payload'] = 'Make a post with required params - Pincode, Latitude and Longitude'
-	# 	response['status']['code'] = 'WRONG_API_METHOD'
+				shouldSave = False
+				shouldSave, response['payload'] = should_save_data(_pincode, _lat, _long, nearby_offset_distance)
 
-	return json.dumps(response)
+				if shouldSave:
+					response['status']['code'] = save_data(_pincode, _city, _state, _lat, _long)
+				else:
+					response['status']['code'] = 'ALREADY_EXISTS'
+		except:
+			response['status']['code'] = 'INCORRECT_DATA'
+
+	return jsonify(response)
 
 @app.route('/get_using_postgres', methods=['GET'])
 def getUsingPostgresHandler():
@@ -54,7 +100,6 @@ def getUsingPostgresHandler():
 			_long = float(request.args.get('long'))
 			_distance = float(request.args.get('distance'))
 			_distance_meters = _distance *  1000
-
 			if not _lat or not _long or not _distance:
 				response['status']['code'] = 'VALIDATION_ERROR :: latitude, longitude and Distance are compulsary'
 			else:
@@ -63,7 +108,7 @@ def getUsingPostgresHandler():
 		except:
 			response['status']['code'] = 'INCORRECT_DATA'
 
-	return json.dumps(response)
+	return jsonify(response)
 
 
 @app.route('/get_using_self', methods=['GET'])
@@ -75,19 +120,20 @@ def getUsingSelfHandler():
 		}
 	}
 	if request.method == 'GET':
-		_lat = request.args.get('lat')
-		_long = request.args.get('long')
-		_distance = request.args.get('distance')
+		try:
+			_lat = float(request.args.get('lat'))
+			_long = float(request.args.get('long'))
+			_distance = float(request.args.get('distance'))
 
-		if not _lat or not _long or not _distance:
-			response['status']['code'] = 'VALIDATION_ERROR :: latitude, longitude and Distance are compulsary'
-		else:
-			response['status']['code'], response["payload"] = get_nearby_data_self(_lat, _long, _distance)
-	# else:
-	# 	response['payload'] = 'Make a GET request with required params - Latitude, Longitude and Distance'
-	# 	response['status']['code'] = 'WRONG_API_METHOD'
+			if not _lat or not _long or not _distance:
+				response['status']['code'] = 'VALIDATION_ERROR :: latitude, longitude and Distance are compulsary'
+			else:
+				response['status']['code'], response["payload"] = get_nearby_data_self(_lat, _long, _distance)
 
-	return json.dumps(response)
+		except:
+			response['status']['code'] = 'INCORRECT_DATA'
+
+	return jsonify(response)
 
 @app.route('/get_containing_area', methods=['GET'])
 def getContainingAreaHandler():
@@ -98,15 +144,19 @@ def getContainingAreaHandler():
 		}
 	}
 	if request.method == 'GET':
-		_lat = request.args.get('lat')
-		_long = request.args.get('long')
+		try:
+			_lat = float(request.args.get('lat'))
+			_long = float(request.args.get('long'))
 
-		if not _lat or not _long:
-			response['status']['code'] = 'VALIDATION_ERROR :: latitude and longitude are compulsary'
-		else:
-			response['status']['code'], response["payload"] = get_containing_area(_lat, _long)
+			if not _lat or not _long:
+				response['status']['code'] = 'VALIDATION_ERROR :: latitude and longitude are compulsary'
+			else:
+				response['status']['code'], response["payload"] = get_containing_area(_lat, _long)
 
-	return json.dumps(response)
+		except:
+			response['status']['code'] = 'INCORRECT_DATA'
+
+	return jsonify(response)
 
 
 
