@@ -2,6 +2,10 @@
 
 ### APIs
 
+```
+	Go To **http://localhost:5000/** to know more about the APIs methods and there data
+```
+
 * post_location - to add a location to DB
 * get_using_postgres - to get nearby pincodes for given lat, long and distance, using postgres extensions
 * get_using_self - to get nearby pincodes for given lat, long and distance, using self calculations

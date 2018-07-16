@@ -41,7 +41,7 @@ def index():
 				]
 			},
 			"get_containing_area": {
-				"method": "POST",
+				"method": "GET",
 				"data": [
 					{
 						"lat": "float",
